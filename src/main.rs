@@ -1,5 +1,8 @@
+mod author;
 mod book;
+mod error;
 
+use crate::author::{add_author, get_author_by_id, get_authors, init_authors_table};
 use crate::book::{add_book, get_book_by_id, get_books, init_books_table};
 use axum::routing::{get, post};
 use axum::Router;
@@ -17,9 +20,13 @@ async fn main() {
 
     let state = AppState { db };
 
+    init_authors_table(state.db.clone()).await;
     init_books_table(state.db.clone()).await;
 
     let router = Router::new()
+        .route("/authors", post(add_author))
+        .route("/authors", get(get_authors))
+        .route("/authors/:id", get(get_author_by_id))
         .route("/books", post(add_book))
         .route("/books", get(get_books))
         .route("/books/:id", get(get_book_by_id))

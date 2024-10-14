@@ -43,6 +43,6 @@ pub(crate) async fn insert_book(
 
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Book {
-    id: Option<i32>,
+    id: i32,
     title: String,
 }

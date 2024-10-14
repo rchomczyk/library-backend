@@ -1,17 +1,13 @@
 use crate::book::book_service::{find_book_by_id, find_books, insert_book};
-use crate::AppState;
+use crate::error::{Empty, RestError, RestGenericException};
+use crate::{forward_error, generic_error, AppState};
 use axum::{extract::Path, extract::State, response::IntoResponse, Json};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
     match find_books(state.db.clone()).await {
         Ok(books) => Ok(Json(books)),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+        Err(err) => forward_error!(err),
     }
 }
 
@@ -21,13 +17,8 @@ pub async fn get_book_by_id(
 ) -> impl IntoResponse {
     match find_book_by_id(state.db.clone(), book_id).await {
         Ok(Some(book)) => Ok(Json(book)),
-        Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, Json(BookError::NotFound))),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+        Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, Json(RestError::NotFound))),
+        Err(err) => forward_error!(err),
     }
 }
 
@@ -36,30 +27,10 @@ pub async fn add_book(
     Json(payload): Json<CreateBook>,
 ) -> impl IntoResponse {
     match insert_book(state.db.clone(), payload.title).await {
-        Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(BookCreated {}))),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+        Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(Empty {}))),
+        Err(err) => forward_error!(err),
     }
 }
-
-#[derive(Serialize)]
-#[serde(tag = "cause", content = "data")]
-pub enum BookError {
-    NotFound,
-    Generic(BookGenericException),
-}
-
-#[derive(Serialize)]
-pub struct BookGenericException {
-    message: String,
-}
-
-#[derive(Serialize)]
-pub struct BookCreated {}
 
 #[derive(Deserialize)]
 pub struct CreateBook {
