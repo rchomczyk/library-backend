@@ -1,10 +1,10 @@
 mod book;
 
+use crate::book::{add_book, get_book_by_id, get_books, init_books_table};
 use axum::routing::{get, post};
 use axum::Router;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::SqlitePool;
-use crate::book::{init_books_table, get_book_by_id, get_books, add_book};
 
 #[derive(Clone)]
 struct AppState {
@@ -13,12 +13,10 @@ struct AppState {
 
 #[tokio::main]
 async fn main() {
-    let db = connect_to_db()
-        .await
-        .expect("couldn't connect to database");
+    let db = connect_to_db().await.expect("couldn't connect to database");
 
     let state = AppState { db };
-    
+
     init_books_table(state.db.clone()).await;
 
     let router = Router::new()
@@ -27,8 +25,10 @@ async fn main() {
         .route("/books/:id", get(get_book_by_id))
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
+        .await
+        .unwrap();
+
     axum::serve(listener, router).await.unwrap();
 }
 
