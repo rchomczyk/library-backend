@@ -1,3 +1,4 @@
+use crate::author::upsert_author;
 use crate::book::book_service::{find_book_by_id, find_books, insert_book};
 use crate::error::{Empty, RestError, RestGenericException};
 use crate::{forward_error, generic_error, AppState};
@@ -26,13 +27,33 @@ pub async fn add_book(
     State(state): State<AppState>,
     Json(payload): Json<CreateBook>,
 ) -> impl IntoResponse {
-    match insert_book(state.db.clone(), payload.title).await {
-        Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(Empty {}))),
+    match upsert_author(
+        state.db.clone(),
+        payload.author.name,
+        payload.author.surname,
+    )
+    .await
+    {
+        Ok(Some(author)) => match insert_book(state.db.clone(), author.id, payload.title).await {
+            Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(Empty {}))),
+            Err(err) => forward_error!(err),
+        },
+        Ok(None) => Err((
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(RestError::BadRequest),
+        )),
         Err(err) => forward_error!(err),
     }
 }
 
 #[derive(Deserialize)]
 pub struct CreateBook {
+    author: AuthorDao,
     title: String,
+}
+
+#[derive(Deserialize)]
+pub struct AuthorDao {
+    name: String,
+    surname: String,
 }

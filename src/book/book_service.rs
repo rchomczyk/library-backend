@@ -7,7 +7,8 @@ pub async fn init_books_table(db: SqlitePool) {
         "\
         CREATE TABLE IF NOT EXISTS books (\
             id INTEGER PRIMARY KEY, \
-            title VARCHAR(32) NOT NULL UNIQUE\
+            author_id INTEGER REFERENCES authors(id), \
+            title VARCHAR(32) NOT NULL UNIQUE \
         )",
     )
     .execute(&db)
@@ -33,9 +34,11 @@ pub(crate) async fn find_book_by_id(
 
 pub(crate) async fn insert_book(
     db: SqlitePool,
+    author_id: i32,
     title: String,
 ) -> Result<SqliteQueryResult, sqlx::Error> {
-    sqlx::query("INSERT INTO books (title) VALUES (?)")
+    sqlx::query("INSERT INTO books (author_id, title) VALUES (?, ?)")
+        .bind(author_id)
         .bind(title)
         .execute(&db)
         .await
@@ -44,5 +47,6 @@ pub(crate) async fn insert_book(
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Book {
     id: i32,
+    author_id: i32,
     title: String,
 }

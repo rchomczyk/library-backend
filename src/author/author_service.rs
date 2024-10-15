@@ -32,6 +32,18 @@ pub(crate) async fn find_author_by_id(
         .await
 }
 
+pub(crate) async fn find_author_by_name_and_surname(
+    db: SqlitePool,
+    name: String,
+    surname: String,
+) -> Result<Option<Author>, sqlx::Error> {
+    sqlx::query_as::<_, Author>("SELECT * FROM authors WHERE name = ? AND surname = ?")
+        .bind(name)
+        .bind(surname)
+        .fetch_optional(&db)
+        .await
+}
+
 pub(crate) async fn insert_author(
     db: SqlitePool,
     name: String,
@@ -44,9 +56,25 @@ pub(crate) async fn insert_author(
         .await
 }
 
+pub async fn upsert_author(
+    db: SqlitePool,
+    name: String,
+    surname: String,
+) -> Result<Option<Author>, sqlx::Error> {
+    let author = find_author_by_name_and_surname(db.clone(), name.clone(), surname.clone())
+        .await
+        .expect("couldn't find author");
+    if author.is_none() {
+        insert_author(db.clone(), name.clone(), surname.clone())
+            .await
+            .expect("couldn't insert author");
+    }
+    find_author_by_name_and_surname(db.clone(), name.clone(), surname.clone()).await
+}
+
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Author {
-    id: i32,
+    pub(crate) id: i32,
     name: String,
     surname: String,
 }

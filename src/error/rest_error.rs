@@ -4,6 +4,7 @@ use serde::Serialize;
 #[serde(tag = "cause", content = "data")]
 pub enum RestError {
     NotFound,
+    BadRequest,
     Generic(RestGenericException),
 }
 
