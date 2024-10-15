@@ -3,7 +3,7 @@ mod book;
 mod error;
 
 use crate::author::{add_author, get_author_by_id, get_authors, init_authors_table};
-use crate::book::{add_book, get_book_by_id, get_books, init_books_table};
+use crate::book::{add_book, get_books_by_author_id, get_book_by_id, get_books, init_books_table};
 use axum::routing::{get, post};
 use axum::Router;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -30,6 +30,7 @@ async fn main() {
         .route("/books", post(add_book))
         .route("/books", get(get_books))
         .route("/books/:id", get(get_book_by_id))
+        .route("/books/author/:id", get(get_books_by_author_id))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")

@@ -22,6 +22,16 @@ pub(crate) async fn find_books(db: SqlitePool) -> Result<Vec<Book>, sqlx::Error>
         .await
 }
 
+pub(crate) async fn find_books_by_author_id(
+    db: SqlitePool,
+    author_id: i32,
+) -> Result<Vec<Book>, sqlx::Error> {
+    sqlx::query_as::<_, Book>("SELECT * FROM books WHERE author_id = ?")
+        .bind(author_id)
+        .fetch_all(&db)
+        .await
+}
+
 pub(crate) async fn find_book_by_id(
     db: SqlitePool,
     book_id: i32,

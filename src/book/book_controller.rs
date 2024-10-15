@@ -1,14 +1,25 @@
 use crate::author::upsert_author;
-use crate::book::book_service::{find_book_by_id, find_books, insert_book};
+use crate::book::book_service::{find_books_by_author_id, find_book_by_id, find_books, insert_book};
 use crate::error::{Empty, RestError, RestGenericException};
-use crate::{forward_error, generic_error, AppState};
+use crate::{bad_request, internal_error, not_found, ok, AppState};
+use axum::http::StatusCode;
 use axum::{extract::Path, extract::State, response::IntoResponse, Json};
 use serde::Deserialize;
 
 pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
     match find_books(state.db.clone()).await {
-        Ok(books) => Ok(Json(books)),
-        Err(err) => forward_error!(err),
+        Ok(books) => ok!(books),
+        Err(err) => internal_error!(err),
+    }
+}
+
+pub async fn get_books_by_author_id(
+    State(state): State<AppState>,
+    Path(author_id): Path<i32>,
+) -> impl IntoResponse {
+    match find_books_by_author_id(state.db.clone(), author_id).await {
+        Ok(books) => ok!(books),
+        Err(err) => internal_error!(err),
     }
 }
 
@@ -17,9 +28,9 @@ pub async fn get_book_by_id(
     Path(book_id): Path<i32>,
 ) -> impl IntoResponse {
     match find_book_by_id(state.db.clone(), book_id).await {
-        Ok(Some(book)) => Ok(Json(book)),
-        Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, Json(RestError::NotFound))),
-        Err(err) => forward_error!(err),
+        Ok(Some(book)) => ok!(book),
+        Ok(None) => not_found!(),
+        Err(err) => internal_error!(err),
     }
 }
 
@@ -35,14 +46,11 @@ pub async fn add_book(
     .await
     {
         Ok(Some(author)) => match insert_book(state.db.clone(), author.id, payload.title).await {
-            Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(Empty {}))),
-            Err(err) => forward_error!(err),
+            Ok(_) => ok!(StatusCode::CREATED, Empty {}),
+            Err(err) => internal_error!(err),
         },
-        Ok(None) => Err((
-            axum::http::StatusCode::BAD_REQUEST,
-            Json(RestError::BadRequest),
-        )),
-        Err(err) => forward_error!(err),
+        Ok(None) => bad_request!(),
+        Err(err) => internal_error!(err),
     }
 }
 
