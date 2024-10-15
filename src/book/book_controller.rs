@@ -1,6 +1,6 @@
 use crate::author::upsert_author;
 use crate::book::book_service::{find_books_by_author_id, find_book_by_id, find_books, insert_book};
-use crate::error::{Empty, RestError, RestGenericException};
+use crate::http::{Empty, RestError, RestGenericException};
 use crate::{bad_request, internal_error, not_found, ok, AppState};
 use axum::http::StatusCode;
 use axum::{extract::Path, extract::State, response::IntoResponse, Json};

@@ -1,5 +1,5 @@
 use crate::author::author_service::{find_author_by_id, find_authors, insert_author};
-use crate::error::{Empty, RestError, RestGenericException};
+use crate::http::{Empty, RestError, RestGenericException};
 use crate::{internal_error, not_found, ok, AppState};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

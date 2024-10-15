@@ -1,6 +1,6 @@
 mod author;
 mod book;
-mod error;
+mod http;
 
 use crate::author::{add_author, get_author_by_id, get_authors, init_authors_table};
 use crate::book::{add_book, get_book_by_id, get_books, get_books_by_author_id, init_books_table};
