@@ -1,17 +1,25 @@
-use crate::book::book_service::{find_book_by_id, find_books, insert_book};
-use crate::AppState;
+use crate::author::upsert_author;
+use crate::book::book_service::{find_books_by_author_id, find_book_by_id, find_books, insert_book};
+use crate::error::{Empty, RestError, RestGenericException};
+use crate::{bad_request, internal_error, not_found, ok, AppState};
+use axum::http::StatusCode;
 use axum::{extract::Path, extract::State, response::IntoResponse, Json};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 pub async fn get_books(State(state): State<AppState>) -> impl IntoResponse {
     match find_books(state.db.clone()).await {
-        Ok(books) => Ok(Json(books)),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+        Ok(books) => ok!(books),
+        Err(err) => internal_error!(err),
+    }
+}
+
+pub async fn get_books_by_author_id(
+    State(state): State<AppState>,
+    Path(author_id): Path<i32>,
+) -> impl IntoResponse {
+    match find_books_by_author_id(state.db.clone(), author_id).await {
+        Ok(books) => ok!(books),
+        Err(err) => internal_error!(err),
     }
 }
 
@@ -20,14 +28,9 @@ pub async fn get_book_by_id(
     Path(book_id): Path<i32>,
 ) -> impl IntoResponse {
     match find_book_by_id(state.db.clone(), book_id).await {
-        Ok(Some(book)) => Ok(Json(book)),
-        Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, Json(BookError::NotFound))),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+        Ok(Some(book)) => ok!(book),
+        Ok(None) => not_found!(),
+        Err(err) => internal_error!(err),
     }
 }
 
@@ -35,33 +38,30 @@ pub async fn add_book(
     State(state): State<AppState>,
     Json(payload): Json<CreateBook>,
 ) -> impl IntoResponse {
-    match insert_book(state.db.clone(), payload.title).await {
-        Ok(_) => Ok((axum::http::StatusCode::CREATED, Json(BookCreated {}))),
-        Err(err) => Err((
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(BookError::Generic(BookGenericException {
-                message: err.to_string(),
-            })),
-        )),
+    match upsert_author(
+        state.db.clone(),
+        payload.author.name,
+        payload.author.surname,
+    )
+    .await
+    {
+        Ok(Some(author)) => match insert_book(state.db.clone(), author.id, payload.title).await {
+            Ok(_) => ok!(StatusCode::CREATED, Empty {}),
+            Err(err) => internal_error!(err),
+        },
+        Ok(None) => bad_request!(),
+        Err(err) => internal_error!(err),
     }
 }
 
-#[derive(Serialize)]
-#[serde(tag = "cause", content = "data")]
-pub enum BookError {
-    NotFound,
-    Generic(BookGenericException),
-}
-
-#[derive(Serialize)]
-pub struct BookGenericException {
-    message: String,
-}
-
-#[derive(Serialize)]
-pub struct BookCreated {}
-
 #[derive(Deserialize)]
 pub struct CreateBook {
+    author: AuthorDao,
     title: String,
+}
+
+#[derive(Deserialize)]
+pub struct AuthorDao {
+    name: String,
+    surname: String,
 }
