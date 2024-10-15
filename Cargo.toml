@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.7.7"
+axum = { version = "0.7.7", features = ["tracing"] }
 sqlx = { version = "0.8.2", features = ["runtime-async-std", "sqlite"] }
 tokio = { version = "1.40.0", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0.210", features = ["derive"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tower-http = { version = "0.6.1", features = ["trace"] }
